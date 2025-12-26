@@ -3,21 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Админ Панель - Email Рассылка</title>
+    <title>Админ Панель - Email Mailer Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style id="theme-styles"></style>
 </head>
-<body>
+<body data-theme="dark">
     <!-- Загрузка -->
     <div id="loader">
-        <div class="spinner"></div>
-        <p>Загрузка админ-панели...</p>
+        <div class="loader-content">
+            <div class="loader-spinner">
+                <div class="spinner"></div>
+                <div class="spinner-text">Загрузка...</div>
+            </div>
+            <div class="loader-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Инициализация системы...</div>
+            </div>
+        </div>
     </div>
 
     <!-- Основной контейнер -->
-    <div id="app" style="display: none;">
+    <div id="app" class="hidden">
         <!-- Шапка -->
         <header class="header">
             <div class="header-left">
@@ -29,18 +40,33 @@
                     <i class="fas fa-crown"></i>
                     АДМИН
                 </div>
+                <div class="connection-status" id="connectionStatus">
+                    <i class="fas fa-circle"></i>
+                    <span>Подключение...</span>
+                </div>
             </div>
             <div class="header-right">
+                <div class="theme-switcher">
+                    <button class="theme-btn" data-theme="light" title="Светлая тема">
+                        <i class="fas fa-sun"></i>
+                    </button>
+                    <button class="theme-btn active" data-theme="dark" title="Темная тема">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="theme-btn" data-theme="space" title="Космическая тема">
+                        <i class="fas fa-rocket"></i>
+                    </button>
+                </div>
                 <div class="user-info" id="userInfo">
                     <div class="avatar" id="userAvatar">
                         <i class="fas fa-user"></i>
                     </div>
                     <div class="user-details">
-                        <span class="username" id="username">Загрузка...</span>
+                        <span class="username" id="username">Admin</span>
                         <span class="user-id" id="userId">ID: --</span>
                     </div>
                 </div>
-                <button class="btn-logout" onclick="logout()">
+                <button class="btn-logout" onclick="logout()" title="Выйти">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
             </div>
@@ -73,9 +99,10 @@
                     <span>Аккаунты</span>
                     <span class="badge" id="accountsCount">0</span>
                 </a>
-                <a href="#statistics" class="nav-item" onclick="showSection('statistics')">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Статистика</span>
+                <a href="#campaigns" class="nav-item" onclick="showSection('campaigns')">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Рассылки</span>
+                    <span class="badge" id="campaignsCount">0</span>
                 </a>
                 <a href="#settings" class="nav-item" onclick="showSection('settings')">
                     <i class="fas fa-cog"></i>
@@ -84,6 +111,13 @@
             </div>
             
             <div class="nav-footer">
+                <div class="server-time">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <span class="time-label">Сервер</span>
+                        <span class="time-value" id="serverTime">--:--</span>
+                    </div>
+                </div>
                 <div class="balance">
                     <i class="fas fa-wallet"></i>
                     <div>
@@ -102,13 +136,16 @@
                     <h1><i class="fas fa-tachometer-alt"></i> Дашборд</h1>
                     <div class="stats-refresh">
                         <span id="lastUpdate">Обновлено: --:--</span>
-                        <button class="btn-refresh" onclick="loadDashboard()">
+                        <button class="btn-refresh" onclick="loadDashboard()" title="Обновить данные">
                             <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <button class="btn-export" onclick="exportDashboard()" title="Экспорт отчета">
+                            <i class="fas fa-download"></i>
                         </button>
                     </div>
                 </div>
                 
-                <div class="stats-cards">
+                <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon users">
                             <i class="fas fa-users"></i>
@@ -133,7 +170,7 @@
                                 <span class="stat-value" id="todayRevenue">$0</span>
                                 <span class="stat-change" id="revenueChange">+0%</span>
                             </div>
-                            <p class="stat-detail">За все время: <span id="totalRevenue">$0</span></p>
+                            <p class="stat-detail">Всего: <span id="totalRevenue">$0</span></p>
                         </div>
                     </div>
                     
@@ -144,10 +181,10 @@
                         <div class="stat-info">
                             <h3>Рассылки</h3>
                             <div class="stat-numbers">
-                                <span class="stat-value" id="todayCampaigns">0</span>
+                                <span class="stat-value" id="totalCampaigns">0</span>
                                 <span class="stat-change" id="campaignsChange">+0%</span>
                             </div>
-                            <p class="stat-detail">Отправлено писем: <span id="totalEmails">0</span></p>
+                            <p class="stat-detail">Писем: <span id="totalEmails">0</span></p>
                         </div>
                     </div>
                     
@@ -159,29 +196,51 @@
                             <h3>Аккаунты</h3>
                             <div class="stat-numbers">
                                 <span class="stat-value" id="activeAccounts">0</span>
-                                <span class="stat-change" id="accountsStatus">0 отл.</span>
+                                <span class="stat-change" id="accountsStatus">100%</span>
                             </div>
                             <p class="stat-detail">Доступно для отправки</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="dashboard-charts">
-                    <div class="chart-container">
-                        <h3><i class="fas fa-chart-line"></i> Доход по дням</h3>
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-line"></i> Доход по дням</h3>
+                            <select id="revenuePeriod" onchange="updateRevenueChart()">
+                                <option value="7">7 дней</option>
+                                <option value="30">30 дней</option>
+                                <option value="90">90 дней</option>
+                            </select>
+                        </div>
                         <canvas id="revenueChart"></canvas>
                     </div>
                     
-                    <div class="chart-container">
-                        <h3><i class="fas fa-user-plus"></i> Новые пользователи</h3>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-user-plus"></i> Новые пользователи</h3>
+                            <select id="usersPeriod" onchange="updateUsersChart()">
+                                <option value="7">7 дней</option>
+                                <option value="30">30 дней</option>
+                                <option value="90">90 дней</option>
+                            </select>
+                        </div>
                         <canvas id="usersChart"></canvas>
                     </div>
                 </div>
                 
                 <div class="recent-activity">
-                    <h3><i class="fas fa-history"></i> Последняя активность</h3>
+                    <div class="activity-header">
+                        <h3><i class="fas fa-history"></i> Последняя активность</h3>
+                        <button class="btn-small" onclick="loadActivity()">
+                            <i class="fas fa-sync"></i>
+                        </button>
+                    </div>
                     <div class="activity-list" id="activityList">
-                        <!-- Активность загружается через JS -->
+                        <div class="activity-empty">
+                            <i class="fas fa-clock"></i>
+                            <p>Загрузка активности...</p>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -194,14 +253,22 @@
                         <div class="search-box">
                             <i class="fas fa-search"></i>
                             <input type="text" id="userSearch" placeholder="Поиск по ID, имени..." onkeyup="searchUsers()">
+                            <button class="search-clear" onclick="clearSearch()">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
-                        <button class="btn-primary" onclick="exportUsers()">
-                            <i class="fas fa-download"></i> Экспорт
-                        </button>
+                        <div class="action-buttons">
+                            <button class="btn-secondary" onclick="exportUsers()">
+                                <i class="fas fa-download"></i> Экспорт
+                            </button>
+                            <button class="btn-primary" onclick="addDaysToUser()">
+                                <i class="fas fa-plus"></i> Добавить дни
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="filters">
+                <div class="filters-bar">
                     <div class="filter-group">
                         <label>Статус:</label>
                         <select id="statusFilter" onchange="filterUsers()">
@@ -221,18 +288,29 @@
                             <option value="spent_desc">Потратили ↓</option>
                         </select>
                     </div>
+                    <div class="filter-group">
+                        <label>На странице:</label>
+                        <select id="usersPerPage" onchange="changeUsersPerPage()">
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
                 </div>
                 
-                <div class="users-table-container">
-                    <table class="users-table">
+                <div class="table-container">
+                    <table class="data-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th width="50">
+                                    <input type="checkbox" id="selectAllUsers" onchange="toggleSelectAllUsers()">
+                                </th>
+                                <th width="80">ID</th>
                                 <th>Пользователь</th>
-                                <th>Подписка</th>
-                                <th>Потрачено</th>
-                                <th>Регистрация</th>
-                                <th>Действия</th>
+                                <th width="120">Подписка</th>
+                                <th width="100">Потрачено</th>
+                                <th width="150">Регистрация</th>
+                                <th width="120">Действия</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
@@ -241,8 +319,13 @@
                     </table>
                 </div>
                 
-                <div class="pagination" id="usersPagination">
-                    <!-- Пагинация -->
+                <div class="table-footer">
+                    <div class="selected-count" id="selectedCount">
+                        Выбрано: 0
+                    </div>
+                    <div class="pagination" id="usersPagination">
+                        <!-- Пагинация -->
+                    </div>
                 </div>
             </section>
 
@@ -251,48 +334,76 @@
                 <div class="section-header">
                     <h1><i class="fas fa-credit-card"></i> Платежи</h1>
                     <div class="section-actions">
-                        <div class="date-filter">
-                            <input type="date" id="paymentDateFrom">
-                            <span>до</span>
-                            <input type="date" id="paymentDateTo">
+                        <div class="date-range">
+                            <input type="date" id="paymentDateFrom" class="date-input">
+                            <span class="date-separator">до</span>
+                            <input type="date" id="paymentDateTo" class="date-input">
                             <button class="btn-small" onclick="filterPayments()">Применить</button>
+                            <button class="btn-small btn-outline" onclick="resetPaymentFilter()">Сброс</button>
                         </div>
+                        <button class="btn-secondary" onclick="exportPayments()">
+                            <i class="fas fa-file-export"></i> Экспорт
+                        </button>
                     </div>
                 </div>
                 
                 <div class="payments-stats">
-                    <div class="payment-stat">
-                        <span class="stat-label">Сегодня:</span>
-                        <span class="stat-value success" id="todayPayments">$0</span>
+                    <div class="payment-stat-card">
+                        <div class="stat-icon success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Завершено</div>
+                            <div class="stat-value" id="completedPayments">0</div>
+                            <div class="stat-amount" id="completedAmount">$0</div>
+                        </div>
                     </div>
-                    <div class="payment-stat">
-                        <span class="stat-label">За месяц:</span>
-                        <span class="stat-value" id="monthPayments">$0</span>
+                    <div class="payment-stat-card">
+                        <div class="stat-icon pending">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">В ожидании</div>
+                            <div class="stat-value" id="pendingPayments">0</div>
+                            <div class="stat-amount" id="pendingAmount">$0</div>
+                        </div>
                     </div>
-                    <div class="payment-stat">
-                        <span class="stat-label">Всего:</span>
-                        <span class="stat-value" id="totalPayments">$0</span>
+                    <div class="payment-stat-card">
+                        <div class="stat-icon total">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Всего</div>
+                            <div class="stat-value" id="totalPayments">0</div>
+                            <div class="stat-amount" id="totalAmount">$0</div>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="payments-table-container">
-                    <table class="payments-table">
+                <div class="table-container">
+                    <table class="data-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th width="80">ID</th>
                                 <th>Пользователь</th>
-                                <th>Дней</th>
-                                <th>Сумма</th>
-                                <th>Статус</th>
-                                <th>Хэш</th>
-                                <th>Дата</th>
-                                <th>Действия</th>
+                                <th width="80">Дней</th>
+                                <th width="100">Сумма</th>
+                                <th width="120">Статус</th>
+                                <th>Инвойс ID</th>
+                                <th width="150">Дата</th>
+                                <th width="100">Действия</th>
                             </tr>
                         </thead>
                         <tbody id="paymentsTableBody">
                             <!-- Данные загружаются через JS -->
                         </tbody>
                     </table>
+                </div>
+                
+                <div class="table-footer">
+                    <div class="pagination" id="paymentsPagination">
+                        <!-- Пагинация -->
+                    </div>
                 </div>
             </section>
 
@@ -306,7 +417,14 @@
                 </div>
                 
                 <div class="templates-grid" id="templatesGrid">
-                    <!-- Шаблоны загружаются через JS -->
+                    <div class="empty-state">
+                        <i class="fas fa-envelope-open-text"></i>
+                        <h3>Нет шаблонов</h3>
+                        <p>Создайте первый шаблон для рассылки</p>
+                        <button class="btn-primary" onclick="showCreateTemplateModal()">
+                            <i class="fas fa-plus"></i> Создать шаблон
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -314,9 +432,44 @@
             <section id="accounts" class="section">
                 <div class="section-header">
                     <h1><i class="fas fa-at"></i> Email аккаунты</h1>
-                    <button class="btn-primary" onclick="showAddAccountModal()">
-                        <i class="fas fa-plus"></i> Добавить аккаунт
-                    </button>
+                    <div class="section-actions">
+                        <button class="btn-secondary" onclick="testAllAccounts()">
+                            <i class="fas fa-vial"></i> Тест всех
+                        </button>
+                        <button class="btn-primary" onclick="showAddAccountModal()">
+                            <i class="fas fa-plus"></i> Добавить аккаунт
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="accounts-stats">
+                    <div class="account-stat">
+                        <div class="stat-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Всего аккаунтов</div>
+                            <div class="stat-value" id="totalAccounts">0</div>
+                        </div>
+                    </div>
+                    <div class="account-stat">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Активных</div>
+                            <div class="stat-value" id="activeAccountsCount">0</div>
+                        </div>
+                    </div>
+                    <div class="account-stat">
+                        <div class="stat-icon">
+                            <i class="fas fa-paper-plane"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Отправлено сегодня</div>
+                            <div class="stat-value" id="sentToday">0</div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="accounts-list" id="accountsList">
@@ -324,7 +477,235 @@
                 </div>
             </section>
 
-            <!-- Другие секции... -->
+            <!-- Рассылки -->
+            <section id="campaigns" class="section">
+                <div class="section-header">
+                    <h1><i class="fas fa-paper-plane"></i> История рассылок</h1>
+                    <div class="section-actions">
+                        <div class="date-range">
+                            <input type="date" id="campaignDateFrom" class="date-input">
+                            <span class="date-separator">до</span>
+                            <input type="date" id="campaignDateTo" class="date-input">
+                            <button class="btn-small" onclick="filterCampaigns()">Фильтр</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="campaigns-stats">
+                    <div class="campaign-stat">
+                        <div class="stat-icon success">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Успешно</div>
+                            <div class="stat-value" id="successEmails">0</div>
+                        </div>
+                    </div>
+                    <div class="campaign-stat">
+                        <div class="stat-icon failed">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Неудачно</div>
+                            <div class="stat-value" id="failedEmails">0</div>
+                        </div>
+                    </div>
+                    <div class="campaign-stat">
+                        <div class="stat-icon total">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Всего отправлено</div>
+                            <div class="stat-value" id="totalSentEmails">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th width="80">ID</th>
+                                <th>Пользователь</th>
+                                <th>Шаблон</th>
+                                <th width="100">Отправлено</th>
+                                <th width="100">Успешно</th>
+                                <th width="100">Неудачно</th>
+                                <th width="120">Статус</th>
+                                <th width="150">Дата</th>
+                                <th width="80">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="campaignsTableBody">
+                            <!-- Данные загружаются через JS -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="table-footer">
+                    <div class="pagination" id="campaignsPagination">
+                        <!-- Пагинация -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Настройки -->
+            <section id="settings" class="section">
+                <div class="section-header">
+                    <h1><i class="fas fa-cog"></i> Настройки системы</h1>
+                </div>
+                
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <div class="settings-header">
+                            <h3><i class="fas fa-paint-brush"></i> Внешний вид</h3>
+                        </div>
+                        <div class="settings-body">
+                            <div class="setting-item">
+                                <label>Тема оформления</label>
+                                <div class="theme-selector">
+                                    <div class="theme-option" data-theme="light" onclick="changeTheme('light')">
+                                        <div class="theme-preview light">
+                                            <div class="preview-header"></div>
+                                            <div class="preview-content"></div>
+                                        </div>
+                                        <span>Светлая</span>
+                                    </div>
+                                    <div class="theme-option active" data-theme="dark" onclick="changeTheme('dark')">
+                                        <div class="theme-preview dark">
+                                            <div class="preview-header"></div>
+                                            <div class="preview-content"></div>
+                                        </div>
+                                        <span>Темная</span>
+                                    </div>
+                                    <div class="theme-option" data-theme="space" onclick="changeTheme('space')">
+                                        <div class="theme-preview space">
+                                            <div class="preview-header"></div>
+                                            <div class="preview-content"></div>
+                                        </div>
+                                        <span>Космическая</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Анимации</label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="animationsToggle" checked>
+                                    <label for="animationsToggle"></label>
+                                    <span>Включить анимации</span>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Автообновление</label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="autoRefreshToggle" checked>
+                                    <label for="autoRefreshToggle"></label>
+                                    <span>Обновлять данные каждые 30 сек</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-card">
+                        <div class="settings-header">
+                            <h3><i class="fas fa-robot"></i> Настройки бота</h3>
+                        </div>
+                        <div class="settings-body">
+                            <div class="setting-item">
+                                <label>Цена за день ($)</label>
+                                <input type="number" id="pricePerDay" value="2.00" step="0.01" min="0.01">
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Минимальная подписка (дней)</label>
+                                <input type="number" id="minSubscriptionDays" value="1" min="1">
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Лимит писем в день на аккаунт</label>
+                                <input type="number" id="dailyEmailLimit" value="100" min="1">
+                            </div>
+                        </div>
+                        <div class="settings-footer">
+                            <button class="btn-primary" onclick="saveBotSettings()">
+                                <i class="fas fa-save"></i> Сохранить настройки
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-card">
+                        <div class="settings-header">
+                            <h3><i class="fas fa-shield-alt"></i> Безопасность</h3>
+                        </div>
+                        <div class="settings-body">
+                            <div class="setting-item">
+                                <label>Двухфакторная аутентификация</label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="2faToggle">
+                                    <label for="2faToggle"></label>
+                                    <span>Включить 2FA</span>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Логирование действий</label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="loggingToggle" checked>
+                                    <label for="loggingToggle"></label>
+                                    <span>Вести детальные логи</span>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Экспорт логов</label>
+                                <button class="btn-small" onclick="exportLogs()">
+                                    <i class="fas fa-download"></i> Скачать логи
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-card">
+                        <div class="settings-header">
+                            <h3><i class="fas fa-database"></i> Система</h3>
+                        </div>
+                        <div class="settings-body">
+                            <div class="system-info">
+                                <div class="info-item">
+                                    <span class="info-label">Версия бота:</span>
+                                    <span class="info-value" id="botVersion">2.0.0</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">База данных:</span>
+                                    <span class="info-value" id="dbStatus">✅ Активна</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">CryptoBot:</span>
+                                    <span class="info-value" id="cryptoBotStatus">Подключен</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">API:</span>
+                                    <span class="info-value" id="apiStatus">Работает</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Последняя активность:</span>
+                                    <span class="info-value" id="lastSystemActivity">--:--</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="settings-footer">
+                            <button class="btn-secondary" onclick="clearCache()">
+                                <i class="fas fa-broom"></i> Очистить кэш
+                            </button>
+                            <button class="btn-danger" onclick="backupDatabase()">
+                                <i class="fas fa-database"></i> Бэкап БД
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -339,20 +720,22 @@
         </div>
         <div class="modal-body">
             <div class="form-group">
-                <label>Название шаблона</label>
-                <input type="text" id="templateName" placeholder="Например: Приветственное письмо">
+                <label>Название шаблона *</label>
+                <input type="text" id="templateName" placeholder="Приветственное письмо">
             </div>
             <div class="form-group">
-                <label>Тема письма</label>
-                <input type="text" id="templateSubject" placeholder="Тема письма">
+                <label>Тема письма *</label>
+                <input type="text" id="templateSubject" placeholder="Добро пожаловать!">
             </div>
             <div class="form-group">
-                <label>Текст письма</label>
-                <textarea id="templateText" rows="10" placeholder="Введите текст письма..."></textarea>
+                <label>Текст письма *</label>
+                <textarea id="templateText" rows="10" placeholder="Здравствуйте, {name}!&#10;&#10;Это тестовое письмо..."></textarea>
                 <div class="textarea-tools">
-                    <button class="btn-small" onclick="insertVariable('{name}')">Имя</button>
-                    <button class="btn-small" onclick="insertVariable('{email}')">Email</button>
-                    <button class="btn-small" onclick="insertVariable('{date}')">Дата</button>
+                    <span class="tools-label">Переменные:</span>
+                    <button class="btn-tag" onclick="insertVariable('{name}')">Имя</button>
+                    <button class="btn-tag" onclick="insertVariable('{email}')">Email</button>
+                    <button class="btn-tag" onclick="insertVariable('{date}')">Дата</button>
+                    <button class="btn-tag" onclick="insertVariable('{username}')">Юзернейм</button>
                 </div>
             </div>
         </div>
@@ -370,20 +753,29 @@
         </div>
         <div class="modal-body">
             <div class="form-group">
-                <label>Email адрес</label>
-                <input type="email" id="accountEmail" placeholder="example@gmail.com">
+                <label>Email адрес *</label>
+                <input type="email" id="accountEmail" placeholder="user@gmail.com">
             </div>
             <div class="form-group">
-                <label>Пароль приложения</label>
-                <input type="password" id="accountPassword" placeholder="Пароль приложения Gmail">
-                <p class="form-hint">
+                <label>Пароль приложения *</label>
+                <input type="password" id="accountPassword" placeholder="xxxx xxxx xxxx xxxx">
+                <div class="form-hint">
                     <i class="fas fa-info-circle"></i>
-                    Используйте пароль приложения из настроек Gmail
-                </p>
+                    <div>
+                        <p><strong>Как получить пароль приложения:</strong></p>
+                        <ol>
+                            <li>Войдите в аккаунт Google</li>
+                            <li>Перейдите в "Безопасность"</li>
+                            <li>Включите двухфакторную аутентификацию</li>
+                            <li>Создайте пароль приложения</li>
+                            <li>Выберите "Почта" и "Другое"</li>
+                        </ol>
+                    </div>
+                </div>
             </div>
             <div class="form-group">
-                <label>Тестовый получатель (опционально)</label>
-                <input type="email" id="testEmail" placeholder="test@example.com">
+                <label>Лимит писем в день</label>
+                <input type="number" id="accountLimit" value="100" min="1" max="500">
             </div>
         </div>
         <div class="modal-footer">
@@ -395,21 +787,69 @@
         </div>
     </div>
 
-    <!-- Модалка редактирования пользователя -->
-    <div id="editUserModal" class="modal">
+    <!-- Модалка добавления дней -->
+    <div id="addDaysModal" class="modal">
         <div class="modal-header">
-            <h3><i class="fas fa-edit"></i> Редактировать пользователя</h3>
+            <h3><i class="fas fa-calendar-plus"></i> Добавить дни подписки</h3>
             <button class="modal-close" onclick="closeModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <div id="editUserContent">
-                <!-- Контент загружается динамически -->
+            <div class="form-group">
+                <label>Пользователь</label>
+                <div class="user-selected" id="selectedUserInfo">
+                    <!-- Информация о пользователе -->
+                </div>
             </div>
+            <div class="form-group">
+                <label>Количество дней *</label>
+                <input type="number" id="addDaysCount" min="1" max="365" value="30">
+            </div>
+            <div class="form-group">
+                <label>Причина</label>
+                <textarea id="addDaysReason" rows="3" placeholder="Техническая поддержка, бонус и т.д."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Текущий баланс: <span id="currentBalance">0</span> дней</label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal()">Отмена</button>
+            <button class="btn-primary" onclick="saveAddedDays()">Добавить дни</button>
+        </div>
+    </div>
+
+    <!-- Модалка информации о платеже -->
+    <div id="paymentInfoModal" class="modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-receipt"></i> Информация о платеже</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="payment-details" id="paymentDetails">
+                <!-- Детали платежа -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeModal()">Закрыть</button>
+            <button class="btn-danger" onclick="cancelPayment()">
+                <i class="fas fa-times"></i> Отменить платеж
+            </button>
         </div>
     </div>
 
     <!-- Уведомления -->
     <div id="notificationContainer"></div>
+
+    <!-- Контекстное меню -->
+    <div id="contextMenu" class="context-menu">
+        <ul>
+            <li onclick="contextEditUser()"><i class="fas fa-edit"></i> Редактировать</li>
+            <li onclick="contextAddDays()"><i class="fas fa-plus"></i> Добавить дни</li>
+            <li onclick="contextViewPayments()"><i class="fas fa-credit-card"></i> Платежи</li>
+            <li class="divider"></li>
+            <li onclick="contextDeleteUser()" class="danger"><i class="fas fa-trash"></i> Удалить</li>
+        </ul>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
