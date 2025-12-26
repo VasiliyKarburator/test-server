@@ -1,6 +1,6 @@
 // ====== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ======
 let tg = window.Telegram.WebApp;
-let botToken = '8550838003:AAFu8_rLZRb2K7Zqj3IBPguiEVpic8IklEk';
+let botToken = '8404025332:AAH0lKtgBsLfsG_R0CbcG3MhHJ83EzASHCg';
 let apiBase = 'http://localhost:5000/api'; // Или ваш сервер
 
 let currentUser = null;
@@ -1266,3 +1266,4 @@ window.selectUserRow = selectUserRow;
 window.toggleUserSelection = toggleUserSelection;
 window.addDaysToUser = addDaysToUser;
 window.loadActivity = loadActivity;
+
